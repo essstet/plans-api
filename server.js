@@ -79,7 +79,7 @@ app.post('/plans/batch', (req, res) => {
   res.json({ success: true, saved: plans.length });
 });
 
-javascript// DELETE — очистить некорректные записи
+// DELETE — очистить некорректные записи
 app.delete('/plans/clean', (req, res) => {
     const result = db.prepare("DELETE FROM plans WHERE month LIKE '%.%'").run();
     res.json({ deleted: result.changes });
