@@ -85,5 +85,10 @@ app.delete('/plans/clean', (req, res) => {
     res.json({ deleted: result.changes });
 });
 
+app.get('/plans/clean', (req, res) => {
+    const result = db.prepare("DELETE FROM plans WHERE month LIKE '%.%'").run();
+    res.json({ deleted: result.changes });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Plans API running on port ${PORT}`));
