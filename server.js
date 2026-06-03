@@ -9,7 +9,6 @@ app.use(express.json());
 
 const db = new Database('plans.db');
 
-// Создаём таблицу если нет
 db.exec(`
   CREATE TABLE IF NOT EXISTS plans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +23,6 @@ db.exec(`
   )
 `);
 
-// GET — получить планы по client_id
 app.get('/plans', (req, res) => {
   const { client_id, year, month } = req.query;
   if (!client_id) return res.status(400).json({ error: 'client_id required' });
@@ -39,7 +37,6 @@ app.get('/plans', (req, res) => {
   res.json(rows);
 });
 
-// POST — сохранить план
 app.post('/plans', (req, res) => {
   const { client_id, manager_id, manager_name, month, year, plan_amount } = req.body;
   
@@ -56,6 +53,30 @@ app.post('/plans', (req, res) => {
   
   stmt.run(client_id, manager_id, manager_name, month, year, plan_amount);
   res.json({ success: true });
+});
+
+app.post('/plans/batch', (req, res) => {
+  const plans = req.body;
+  
+  if (!Array.isArray(plans)) {
+    return res.status(400).json({ error: 'Expected array' });
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO plans (client_id, manager_id, manager_name, month, year, plan_amount, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(client_id, manager_id, month, year)
+    DO UPDATE SET plan_amount = excluded.plan_amount, updated_at = datetime('now')
+  `);
+
+  const insertMany = db.transaction((items) => {
+    for (const item of items) {
+      stmt.run(item.client_id, item.manager_id, item.manager_name, item.month, item.year, item.plan_amount);
+    }
+  });
+
+  insertMany(plans);
+  res.json({ success: true, saved: plans.length });
 });
 
 const PORT = process.env.PORT || 3000;
